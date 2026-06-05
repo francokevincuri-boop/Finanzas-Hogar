@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
+import { obtenerDolar } from "../lib/externos";
 
 /**
  * GET /hogares/:hogarId/transacciones
@@ -128,6 +129,17 @@ export async function crearTransaccion(req: Request, res: Response) {
     }
   }
 
+  // Si la cuenta es en USD, guardar la cotización oficial del día (decisión §12):
+  // los reportes históricos en pesos quedan exactos para siempre.
+  let cotizacionDelDia: number | null = null;
+  if (cuenta.moneda === "USD") {
+    try {
+      cotizacionDelDia = (await obtenerDolar()).oficial;
+    } catch {
+      // sin cotización disponible se guarda igual, con cotizacion null
+    }
+  }
+
   // Crear transacción + mover saldos, todo o nada
   const transaccion = await prisma.$transaction(async (tx) => {
     const nueva = await tx.transaccion.create({
@@ -135,6 +147,7 @@ export async function crearTransaccion(req: Request, res: Response) {
         hogarId,
         cuentaId,
         cuentaDestinoId: tipo === "transferencia" ? cuentaDestinoId : null,
+        cotizacion: cotizacionDelDia,
         categoriaId: categoriaId ?? null,
         miembroId: req.miembro!.id, // quién la cargó
         tipo,

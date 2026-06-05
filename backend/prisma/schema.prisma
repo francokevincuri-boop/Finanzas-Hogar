@@ -2,6 +2,7 @@
 // Fase 1: Usuario, Hogar, MiembroHogar, Cuenta, Categoria, Transaccion
 // Fase 2: Tarjeta, ConsumoTarjeta, Cuota + transferencias (cuenta_destino_id)
 // Fase 3: Servicio, PagoServicio, Presupuesto (vencimientos se calculan al vuelo)
+// Fase 4: Inversion + cachés de CotizacionDolar e IndiceInflacion + cotizacion en Transaccion
 
 generator client {
   provider = "prisma-client-js"
@@ -37,6 +38,7 @@ model Hogar {
   tarjetas      Tarjeta[]
   servicios     Servicio[]
   presupuestos  Presupuesto[]
+  inversiones   Inversion[]
 
   @@map("hogares")
 }
@@ -127,6 +129,7 @@ model Transaccion {
   fecha           DateTime        @db.Date
   descripcion     String?
   compartida      Boolean         @default(false)
+  cotizacion      Decimal?        @db.Decimal(10, 2) // cotización oficial del día si la transacción es en USD
   creadoEn        DateTime        @default(now()) @map("creado_en")
   hogar           Hogar           @relation(fields: [hogarId], references: [id])
   cuenta          Cuenta          @relation("TransaccionesOrigen", fields: [cuentaId], references: [id])
@@ -221,6 +224,51 @@ model Presupuesto {
 
   @@unique([hogarId, categoriaId, mes])
   @@map("presupuestos")
+}
+
+// ── Fase 4: Inversiones y datos externos (dólar / inflación) ──────
+
+enum TipoInversion {
+  plazo_fijo
+  fci
+  usd
+  cedear
+  cripto
+}
+
+model Inversion {
+  id          String        @id @default(uuid())
+  hogarId     String        @map("hogar_id")
+  tipo        TipoInversion
+  nombre      String // ej: "Plazo fijo BNA 30 días", "CEDEAR AAPL"
+  monto       Decimal       @db.Decimal(15, 2) // lo invertido originalmente
+  moneda      String        @default("ARS")
+  fecha       DateTime      @db.Date // cuándo se invirtió
+  valorActual Decimal?      @map("valor_actual") @db.Decimal(15, 2) // se actualiza a mano
+  creadoEn    DateTime      @default(now()) @map("creado_en")
+  hogar       Hogar         @relation(fields: [hogarId], references: [id])
+
+  @@index([hogarId])
+  @@map("inversiones")
+}
+
+// Caché de DolarApi.com — una fila por día
+model CotizacionDolar {
+  fecha         String   @id // YYYY-MM-DD
+  oficial       Decimal  @db.Decimal(10, 2) // venta
+  blue          Decimal  @db.Decimal(10, 2)
+  mep           Decimal  @db.Decimal(10, 2)
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  @@map("cotizaciones_dolar")
+}
+
+// Caché del IPC INDEC (datos.gob.ar) — una fila por mes
+model IndiceInflacion {
+  mes String  @id // YYYY-MM
+  ipc Decimal @db.Decimal(12, 4) // índice base dic-2016
+
+  @@map("indices_inflacion")
 }
 
 model Cuota {
