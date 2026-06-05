@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import authRoutes from "./routes/auth.routes";
 import hogaresRoutes from "./routes/hogares.routes";
+import { cotizacionDolar, inflacion } from "./controllers/cotizaciones.controller";
 
 const app = express();
 app.use(cors());
@@ -16,7 +17,10 @@ app.get("/health", (_req, res) => {
 // Rutas por módulo
 app.use("/auth", authRoutes);
 app.use("/hogares", hogaresRoutes);
-// Próximos: cuentas, categorías, transacciones
+
+// Datos externos (públicos: no exponen nada del hogar)
+app.get("/cotizaciones/dolar", cotizacionDolar);
+app.get("/inflacion", inflacion);
 
 const PORT = process.env.PORT ?? 3000;
 app.listen(PORT, () => {

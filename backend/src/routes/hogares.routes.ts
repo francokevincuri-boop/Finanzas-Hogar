@@ -6,6 +6,8 @@ import categoriasRoutes from "./categorias.routes";
 import transaccionesRoutes from "./transacciones.routes";
 import tarjetasRoutes from "./tarjetas.routes";
 import serviciosRoutes from "./servicios.routes";
+import inversionesRoutes from "./inversiones.routes";
+import { patrimonio } from "../controllers/inversiones.controller";
 import {
   listarVencimientos,
   balanceMensual,
@@ -31,6 +33,10 @@ router.use("/:hogarId/categorias", requireMiembroHogar, categoriasRoutes);
 router.use("/:hogarId/transacciones", requireMiembroHogar, transaccionesRoutes);
 router.use("/:hogarId/tarjetas", requireMiembroHogar, tarjetasRoutes);
 router.use("/:hogarId/servicios", requireMiembroHogar, serviciosRoutes);
+router.use("/:hogarId/inversiones", requireMiembroHogar, inversionesRoutes);
+
+// Patrimonio neto (Etapa 4)
+router.get("/:hogarId/patrimonio", requireMiembroHogar, patrimonio);
 
 // Proyección (Etapa 3)
 router.get("/:hogarId/vencimientos", requireMiembroHogar, listarVencimientos);
