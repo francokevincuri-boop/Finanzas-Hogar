@@ -211,6 +211,7 @@ Front y back nunca se hablan directo durante el desarrollo: se hablan a través 
 ### Reglas de trabajo
 
 - Claude propone, **Franco confirma**, recién ahí se ejecuta. Nunca codear ni asumir sin OK explícito.
+- Cada bloque de trabajo arranca con una rama `feature/*` desde `develop`: Claude pasa los comandos, Franco crea la rama y da el OK, recién ahí se codea. Probado el bloque, se mergea a `develop`.
 - Cada decisión nueva se registra en este documento (fuente de verdad).
 
 ### Decisiones pendientes
