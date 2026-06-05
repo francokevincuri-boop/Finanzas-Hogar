@@ -1,5 +1,6 @@
-// Schema Fase 1 — traducción directa del modelo de CLAUDE.md §5
-// Entidades: Usuario, Hogar, MiembroHogar, Cuenta, Categoria, Transaccion
+// Schema Fases 1 y 2 — traducción directa del modelo de CLAUDE.md §5
+// Fase 1: Usuario, Hogar, MiembroHogar, Cuenta, Categoria, Transaccion
+// Fase 2: Tarjeta, ConsumoTarjeta, Cuota + transferencias (cuenta_destino_id)
 
 generator client {
   provider = "prisma-client-js"
@@ -32,6 +33,7 @@ model Hogar {
   cuentas       Cuenta[]
   categorias    Categoria[]
   transacciones Transaccion[]
+  tarjetas      Tarjeta[]
 
   @@map("hogares")
 }
@@ -77,7 +79,8 @@ model Cuenta {
   saldoActual   Decimal       @default(0) @map("saldo_actual") @db.Decimal(15, 2)
   creadoEn      DateTime      @default(now()) @map("creado_en")
   hogar         Hogar         @relation(fields: [hogarId], references: [id])
-  transacciones Transaccion[]
+  transacciones Transaccion[] @relation("TransaccionesOrigen")
+  transferenciasRecibidas Transaccion[] @relation("TransaccionesDestino")
 
   @@index([hogarId])
   @@map("cuentas")
@@ -108,23 +111,73 @@ enum TipoTransaccion {
 }
 
 model Transaccion {
-  id          String          @id @default(uuid())
-  hogarId     String          @map("hogar_id")
-  cuentaId    String          @map("cuenta_id")
-  categoriaId String?         @map("categoria_id")
-  miembroId   String?         @map("miembro_id")
-  tipo        TipoTransaccion
-  monto       Decimal         @db.Decimal(15, 2)
-  moneda      String          @default("ARS")
-  fecha       DateTime        @db.Date
-  descripcion String?
-  compartida  Boolean         @default(false)
-  creadoEn    DateTime        @default(now()) @map("creado_en")
-  hogar       Hogar           @relation(fields: [hogarId], references: [id])
-  cuenta      Cuenta          @relation(fields: [cuentaId], references: [id])
-  categoria   Categoria?      @relation(fields: [categoriaId], references: [id])
-  miembro     MiembroHogar?   @relation(fields: [miembroId], references: [id])
+  id              String          @id @default(uuid())
+  hogarId         String          @map("hogar_id")
+  cuentaId        String          @map("cuenta_id")
+  cuentaDestinoId String?         @map("cuenta_destino_id") // solo transferencias: a dónde va la plata
+  categoriaId     String?         @map("categoria_id")
+  miembroId       String?         @map("miembro_id")
+  tipo            TipoTransaccion
+  monto           Decimal         @db.Decimal(15, 2)
+  moneda          String          @default("ARS")
+  fecha           DateTime        @db.Date
+  descripcion     String?
+  compartida      Boolean         @default(false)
+  creadoEn        DateTime        @default(now()) @map("creado_en")
+  hogar           Hogar           @relation(fields: [hogarId], references: [id])
+  cuenta          Cuenta          @relation("TransaccionesOrigen", fields: [cuentaId], references: [id])
+  cuentaDestino   Cuenta?         @relation("TransaccionesDestino", fields: [cuentaDestinoId], references: [id])
+  categoria       Categoria?      @relation(fields: [categoriaId], references: [id])
+  miembro         MiembroHogar?   @relation(fields: [miembroId], references: [id])
 
   @@index([hogarId, fecha])
   @@map("transacciones")
+}
+
+// ── Fase 2: Tarjetas de crédito y cuotas ──────────────────────────
+
+model Tarjeta {
+  id             String           @id @default(uuid())
+  hogarId        String           @map("hogar_id")
+  nombre         String // ej: "Visa Galicia"
+  banco          String?
+  limite         Decimal?         @db.Decimal(15, 2)
+  diaCierre      Int              @map("dia_cierre") // día del mes en que cierra el resumen
+  diaVencimiento Int              @map("dia_vencimiento") // día del mes en que vence el pago
+  creadoEn       DateTime         @default(now()) @map("creado_en")
+  hogar          Hogar            @relation(fields: [hogarId], references: [id])
+  consumos       ConsumoTarjeta[]
+
+  @@index([hogarId])
+  @@map("tarjetas")
+}
+
+model ConsumoTarjeta {
+  id          String   @id @default(uuid())
+  tarjetaId   String   @map("tarjeta_id")
+  descripcion String
+  montoTotal  Decimal  @map("monto_total") @db.Decimal(15, 2)
+  fecha       DateTime @db.Date // fecha de la compra
+  enCuotas    Boolean  @default(false) @map("en_cuotas")
+  creadoEn    DateTime @default(now()) @map("creado_en")
+  tarjeta     Tarjeta  @relation(fields: [tarjetaId], references: [id])
+  cuotas      Cuota[]
+
+  @@index([tarjetaId])
+  @@map("consumos_tarjeta")
+}
+
+model Cuota {
+  id               String         @id @default(uuid())
+  consumoId        String         @map("consumo_id")
+  numero           Int // cuota 3...
+  totalCuotas      Int            @map("total_cuotas") // ...de 12
+  monto            Decimal        @db.Decimal(15, 2)
+  fechaVencimiento DateTime       @map("fecha_vencimiento") @db.Date // en qué resumen cae
+  pagada           Boolean        @default(false)
+  consumo          ConsumoTarjeta @relation(fields: [consumoId], references: [id])
+
+  @@index([consumoId])
+  @@index([fechaVencimiento])
+  @@map("cuotas")
 }

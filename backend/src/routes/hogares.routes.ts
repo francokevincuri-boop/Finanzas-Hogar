@@ -4,6 +4,7 @@ import { listarHogares, crearHogar, listarMiembros, agregarMiembro } from "../co
 import cuentasRoutes from "./cuentas.routes";
 import categoriasRoutes from "./categorias.routes";
 import transaccionesRoutes from "./transacciones.routes";
+import tarjetasRoutes from "./tarjetas.routes";
 
 const router = Router();
 
@@ -21,5 +22,6 @@ router.post("/:hogarId/miembros", requireMiembroHogar, requireRol("dueno"), agre
 router.use("/:hogarId/cuentas", requireMiembroHogar, cuentasRoutes);
 router.use("/:hogarId/categorias", requireMiembroHogar, categoriasRoutes);
 router.use("/:hogarId/transacciones", requireMiembroHogar, transaccionesRoutes);
+router.use("/:hogarId/tarjetas", requireMiembroHogar, tarjetasRoutes);
 
 export default router;
