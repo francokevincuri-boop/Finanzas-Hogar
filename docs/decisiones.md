@@ -12,3 +12,4 @@ Registro cronológico. El detalle vive en `CLAUDE.md` (§12).
 | 2026-06-05 | Ramas: `develop` por defecto (trabajo diario), `main` solo releases con tag de versión. |
 | 2026-06-05 | GitHub Actions a futuro: CI sobre `develop`, deploy al taguear en `main`. |
 | 2026-06-05 | Transferencias: columna `cuenta_destino_id` nullable en `Transaccion` (una sola fila, origen y destino). |
+| 2026-06-05 | Vencimientos calculados al vuelo desde servicios y cuotas; sin tabla materializada. |

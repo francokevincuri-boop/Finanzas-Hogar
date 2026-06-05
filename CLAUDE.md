@@ -208,6 +208,7 @@ Front y back nunca se hablan directo durante el desarrollo: se hablan a través 
 | Ramas | **`develop`** = rama por defecto, trabajo diario; ramas de feature salen de ahí. **`main`** = solo versiones estables, merge con tag (`v0.1.0`, ...). |
 | CI/CD | **GitHub Actions** a futuro (cuando haya server): CI sobre `develop`, deploy al taguear en `main`. |
 | Transferencias | **Columna `cuenta_destino_id` (nullable) en `Transaccion`**: una sola transacción con origen y destino. Se implementa con la migración de Etapa 2. |
+| Vencimientos | **Calculados al vuelo** desde servicios y cuotas (sin tabla materializada). El estado "pagado" vive en el origen. Se materializa solo si el rendimiento lo exige a futuro. |
 
 ### Reglas de trabajo
 
@@ -219,5 +220,5 @@ Front y back nunca se hablan directo durante el desarrollo: se hablan a través 
 
 - Detalle del formato de import de resúmenes (qué bancos/tarjetas priorizar).
 - Estrategia de notificaciones/alertas (push, email, in-app).
-- Diseño de `Vencimiento`: tabla materializada vs. vista calculada (a discutir en Etapa 3).
-- Guardar cotización del día (o `monto_ars_equivalente`) en `Transaccion` para ajuste por inflación retroactivo (a discutir en Etapa 1).
+- Guardar cotización del día (o `monto_ars_equivalente`) en `Transaccion` para ajuste por inflación retroactivo (a discutir antes de Etapa 4).
+- Upgrade a Prisma 7 (hoy en 6.x; es cambio mayor, hacerlo entre etapas).
