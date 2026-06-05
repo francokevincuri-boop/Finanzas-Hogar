@@ -8,6 +8,7 @@ import tarjetasRoutes from "./tarjetas.routes";
 import serviciosRoutes from "./servicios.routes";
 import inversionesRoutes from "./inversiones.routes";
 import { patrimonio } from "../controllers/inversiones.controller";
+import { simular } from "../controllers/asistente.controller";
 import {
   listarVencimientos,
   balanceMensual,
@@ -37,6 +38,9 @@ router.use("/:hogarId/inversiones", requireMiembroHogar, inversionesRoutes);
 
 // Patrimonio neto (Etapa 4)
 router.get("/:hogarId/patrimonio", requireMiembroHogar, patrimonio);
+
+// Asistente (Etapa 5): simulador sin IA. /preguntar (con IA) queda pospuesto.
+router.post("/:hogarId/asistente/simular", requireMiembroHogar, simular);
 
 // Proyección (Etapa 3)
 router.get("/:hogarId/vencimientos", requireMiembroHogar, listarVencimientos);
