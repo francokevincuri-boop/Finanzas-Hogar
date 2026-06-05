@@ -38,6 +38,7 @@ export async function listarTransacciones(req: Request, res: Response) {
     },
     include: {
       cuenta: { select: { nombre: true } },
+      cuentaDestino: { select: { nombre: true } },
       categoria: { select: { nombre: true } },
       miembro: { include: { usuario: { select: { nombre: true } } } },
     },
@@ -55,6 +56,7 @@ export async function listarTransacciones(req: Request, res: Response) {
       compartida: t.compartida,
       cuenta: t.cuenta.nombre,
       cuentaId: t.cuentaId,
+      cuentaDestino: t.cuentaDestino?.nombre ?? null,
       categoria: t.categoria?.nombre ?? null,
       categoriaId: t.categoriaId,
       miembro: t.miembro?.usuario.nombre ?? null,
@@ -68,18 +70,15 @@ export async function listarTransacciones(req: Request, res: Response) {
  * El saldo de la cuenta se actualiza solo: ingreso suma, gasto resta.
  */
 export async function crearTransaccion(req: Request, res: Response) {
-  const { tipo, monto, cuentaId, categoriaId, fecha, descripcion, compartida } = req.body ?? {};
+  const { tipo, monto, cuentaId, cuentaDestinoId, categoriaId, fecha, descripcion, compartida } = req.body ?? {};
   const hogarId = req.params.hogarId;
 
   // Validaciones
   if (!tipo || monto === undefined || !cuentaId) {
     return res.status(400).json({ error: "Faltan campos: tipo, monto y cuentaId son obligatorios." });
   }
-  if (!["ingreso", "gasto"].includes(tipo)) {
-    if (tipo === "transferencia") {
-      return res.status(400).json({ error: "Las transferencias entre cuentas vienen en el próximo bloque." });
-    }
-    return res.status(400).json({ error: "Tipo inválido. Opciones: ingreso, gasto." });
+  if (!["ingreso", "gasto", "transferencia"].includes(tipo)) {
+    return res.status(400).json({ error: "Tipo inválido. Opciones: ingreso, gasto, transferencia." });
   }
   if (typeof monto !== "number" || monto <= 0) {
     return res.status(400).json({ error: "El monto debe ser un número mayor a cero." });
@@ -94,6 +93,30 @@ export async function crearTransaccion(req: Request, res: Response) {
     return res.status(404).json({ error: "Cuenta no encontrada en este hogar." });
   }
 
+  // Reglas extra para transferencias
+  let cuentaDestino = null;
+  if (tipo === "transferencia") {
+    if (!cuentaDestinoId) {
+      return res.status(400).json({ error: "Una transferencia necesita cuentaDestinoId." });
+    }
+    if (cuentaDestinoId === cuentaId) {
+      return res.status(400).json({ error: "La cuenta de origen y destino no pueden ser la misma." });
+    }
+    cuentaDestino = await prisma.cuenta.findFirst({ where: { id: cuentaDestinoId, hogarId } });
+    if (!cuentaDestino) {
+      return res.status(404).json({ error: "Cuenta destino no encontrada en este hogar." });
+    }
+    if (cuentaDestino.moneda !== cuenta.moneda) {
+      return res.status(400).json({
+        error: `Las cuentas tienen monedas distintas (${cuenta.moneda} → ${cuentaDestino.moneda}). La compra/venta de dólares llega en la Etapa 4.`,
+      });
+    }
+  }
+
+  if (tipo === "transferencia" && categoriaId) {
+    return res.status(400).json({ error: "Las transferencias no llevan categoría: no son un gasto ni un ingreso." });
+  }
+
   // La categoría (si viene) tiene que ser de este hogar y del tipo correcto
   if (categoriaId) {
     const categoria = await prisma.categoria.findFirst({ where: { id: categoriaId, hogarId } });
@@ -105,12 +128,13 @@ export async function crearTransaccion(req: Request, res: Response) {
     }
   }
 
-  // Crear transacción + mover saldo, todo o nada
+  // Crear transacción + mover saldos, todo o nada
   const transaccion = await prisma.$transaction(async (tx) => {
     const nueva = await tx.transaccion.create({
       data: {
         hogarId,
         cuentaId,
+        cuentaDestinoId: tipo === "transferencia" ? cuentaDestinoId : null,
         categoriaId: categoriaId ?? null,
         miembroId: req.miembro!.id, // quién la cargó
         tipo,
@@ -122,10 +146,16 @@ export async function crearTransaccion(req: Request, res: Response) {
       },
     });
 
-    await tx.cuenta.update({
-      where: { id: cuentaId },
-      data: { saldoActual: tipo === "ingreso" ? { increment: monto } : { decrement: monto } },
-    });
+    if (tipo === "transferencia") {
+      // Sale de origen, entra a destino
+      await tx.cuenta.update({ where: { id: cuentaId }, data: { saldoActual: { decrement: monto } } });
+      await tx.cuenta.update({ where: { id: cuentaDestinoId }, data: { saldoActual: { increment: monto } } });
+    } else {
+      await tx.cuenta.update({
+        where: { id: cuentaId },
+        data: { saldoActual: tipo === "ingreso" ? { increment: monto } : { decrement: monto } },
+      });
+    }
 
     return nueva;
   });
@@ -146,14 +176,20 @@ export async function eliminarTransaccion(req: Request, res: Response) {
   }
 
   await prisma.$transaction(async (tx) => {
-    // Revertir el saldo: si era ingreso se resta, si era gasto se devuelve
-    await tx.cuenta.update({
-      where: { id: existente.cuentaId },
-      data: {
-        saldoActual:
-          existente.tipo === "ingreso" ? { decrement: existente.monto } : { increment: existente.monto },
-      },
-    });
+    if (existente.tipo === "transferencia" && existente.cuentaDestinoId) {
+      // Revertir transferencia: la plata vuelve al origen
+      await tx.cuenta.update({ where: { id: existente.cuentaId }, data: { saldoActual: { increment: existente.monto } } });
+      await tx.cuenta.update({ where: { id: existente.cuentaDestinoId }, data: { saldoActual: { decrement: existente.monto } } });
+    } else {
+      // Revertir el saldo: si era ingreso se resta, si era gasto se devuelve
+      await tx.cuenta.update({
+        where: { id: existente.cuentaId },
+        data: {
+          saldoActual:
+            existente.tipo === "ingreso" ? { decrement: existente.monto } : { increment: existente.monto },
+        },
+      });
+    }
     await tx.transaccion.delete({ where: { id: existente.id } });
   });
 
