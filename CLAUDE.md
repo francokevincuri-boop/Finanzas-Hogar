@@ -207,6 +207,7 @@ Front y back nunca se hablan directo durante el desarrollo: se hablan a través 
 | Dólar/IPC | **DolarApi.com** (oficial/MEP/blue, gratis sin key) + **IPC del INDEC** (datos.gob.ar). Se verifica disponibilidad al implementar en Etapa 4. |
 | Ramas | **`develop`** = rama por defecto, trabajo diario; ramas de feature salen de ahí. **`main`** = solo versiones estables, merge con tag (`v0.1.0`, ...). |
 | CI/CD | **GitHub Actions** a futuro (cuando haya server): CI sobre `develop`, deploy al taguear en `main`. |
+| Transferencias | **Columna `cuenta_destino_id` (nullable) en `Transaccion`**: una sola transacción con origen y destino. Se implementa con la migración de Etapa 2. |
 
 ### Reglas de trabajo
 
