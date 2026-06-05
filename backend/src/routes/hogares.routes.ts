@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { requireAuth, requireMiembroHogar, requireRol } from "../middleware/auth";
 import { listarHogares, crearHogar, listarMiembros, agregarMiembro } from "../controllers/hogares.controller";
+import cuentasRoutes from "./cuentas.routes";
+import categoriasRoutes from "./categorias.routes";
 
 const router = Router();
 
@@ -13,5 +15,9 @@ router.post("/", crearHogar);
 // Las rutas con :hogarId exigen además ser miembro de ESE hogar
 router.get("/:hogarId/miembros", requireMiembroHogar, listarMiembros);
 router.post("/:hogarId/miembros", requireMiembroHogar, requireRol("dueno"), agregarMiembro);
+
+// Submódulos del hogar
+router.use("/:hogarId/cuentas", requireMiembroHogar, cuentasRoutes);
+router.use("/:hogarId/categorias", requireMiembroHogar, categoriasRoutes);
 
 export default router;

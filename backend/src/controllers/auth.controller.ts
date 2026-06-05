@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import { prisma } from "../lib/prisma";
 import { firmarToken } from "../middleware/auth";
+import { CATEGORIAS_INICIALES } from "../lib/categoriasIniciales";
 
 /**
  * POST /auth/register
@@ -39,6 +40,10 @@ export async function register(req: Request, res: Response) {
     });
     await tx.miembroHogar.create({
       data: { usuarioId: usuario.id, hogarId: hogar.id, rol: "dueno" },
+    });
+    // Categorías argentinas precargadas para no arrancar de cero
+    await tx.categoria.createMany({
+      data: CATEGORIAS_INICIALES.map((c) => ({ ...c, hogarId: hogar.id })),
     });
     return { usuario, hogar };
   });

@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
+import { CATEGORIAS_INICIALES } from "../lib/categoriasIniciales";
 
 /**
  * GET /hogares
@@ -41,6 +42,10 @@ export async function crearHogar(req: Request, res: Response) {
     });
     await tx.miembroHogar.create({
       data: { usuarioId: req.usuarioId!, hogarId: nuevo.id, rol: "dueno" },
+    });
+    // Categorías argentinas precargadas para no arrancar de cero
+    await tx.categoria.createMany({
+      data: CATEGORIAS_INICIALES.map((c) => ({ ...c, hogarId: nuevo.id })),
     });
     return nuevo;
   });
