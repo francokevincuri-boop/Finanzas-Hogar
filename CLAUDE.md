@@ -209,6 +209,7 @@ Front y back nunca se hablan directo durante el desarrollo: se hablan a través 
 | CI/CD | **GitHub Actions** a futuro (cuando haya server): CI sobre `develop`, deploy al taguear en `main`. |
 | Transferencias | **Columna `cuenta_destino_id` (nullable) en `Transaccion`**: una sola transacción con origen y destino. Se implementa con la migración de Etapa 2. |
 | Vencimientos | **Calculados al vuelo** desde servicios y cuotas (sin tabla materializada). El estado "pagado" vive en el origen. Se materializa solo si el rendimiento lo exige a futuro. |
+| Cotización en transacciones | **Columna `cotizacion` (nullable) en `Transaccion`**: al crear una transacción en USD se guarda la cotización oficial del día. Reportes históricos exactos para siempre. Verificado 2026-06-05: DolarApi.com e IPC INDEC (datos.gob.ar) funcionando. |
 
 ### Reglas de trabajo
 
@@ -220,5 +221,4 @@ Front y back nunca se hablan directo durante el desarrollo: se hablan a través 
 
 - Detalle del formato de import de resúmenes (qué bancos/tarjetas priorizar).
 - Estrategia de notificaciones/alertas (push, email, in-app).
-- Guardar cotización del día (o `monto_ars_equivalente`) en `Transaccion` para ajuste por inflación retroactivo (a discutir antes de Etapa 4).
 - Upgrade a Prisma 7 (hoy en 6.x; es cambio mayor, hacerlo entre etapas).
