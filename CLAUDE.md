@@ -220,6 +220,7 @@ Front y back nunca se hablan directo durante el desarrollo: se hablan a través 
 
 ### Decisiones pendientes
 
+- Asistente con IA (`/preguntar`) pospuesto (2026-06-05): requiere API key paga de Anthropic; se retoma cuando Franco quiera. El simulador (`/simular`) no requiere IA y puede construirse antes.
 - Detalle del formato de import de resúmenes (qué bancos/tarjetas priorizar).
 - Estrategia de notificaciones/alertas (push, email, in-app).
 - Upgrade a Prisma 7 (hoy en 6.x; es cambio mayor, hacerlo entre etapas).
