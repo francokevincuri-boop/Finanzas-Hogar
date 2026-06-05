@@ -5,6 +5,13 @@ import cuentasRoutes from "./cuentas.routes";
 import categoriasRoutes from "./categorias.routes";
 import transaccionesRoutes from "./transacciones.routes";
 import tarjetasRoutes from "./tarjetas.routes";
+import serviciosRoutes from "./servicios.routes";
+import {
+  listarVencimientos,
+  balanceMensual,
+  verPresupuesto,
+  asignarPresupuesto,
+} from "../controllers/proyeccion.controller";
 
 const router = Router();
 
@@ -23,5 +30,12 @@ router.use("/:hogarId/cuentas", requireMiembroHogar, cuentasRoutes);
 router.use("/:hogarId/categorias", requireMiembroHogar, categoriasRoutes);
 router.use("/:hogarId/transacciones", requireMiembroHogar, transaccionesRoutes);
 router.use("/:hogarId/tarjetas", requireMiembroHogar, tarjetasRoutes);
+router.use("/:hogarId/servicios", requireMiembroHogar, serviciosRoutes);
+
+// Proyección (Etapa 3)
+router.get("/:hogarId/vencimientos", requireMiembroHogar, listarVencimientos);
+router.get("/:hogarId/balance/:mes", requireMiembroHogar, balanceMensual);
+router.get("/:hogarId/presupuesto/:mes", requireMiembroHogar, verPresupuesto);
+router.put("/:hogarId/presupuesto/:mes", requireMiembroHogar, requireRol("dueno", "colaborador"), asignarPresupuesto);
 
 export default router;

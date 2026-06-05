@@ -1,6 +1,7 @@
-// Schema Fases 1 y 2 — traducción directa del modelo de CLAUDE.md §5
+// Schema Fases 1, 2 y 3 — traducción directa del modelo de CLAUDE.md §5
 // Fase 1: Usuario, Hogar, MiembroHogar, Cuenta, Categoria, Transaccion
 // Fase 2: Tarjeta, ConsumoTarjeta, Cuota + transferencias (cuenta_destino_id)
+// Fase 3: Servicio, PagoServicio, Presupuesto (vencimientos se calculan al vuelo)
 
 generator client {
   provider = "prisma-client-js"
@@ -34,6 +35,8 @@ model Hogar {
   categorias    Categoria[]
   transacciones Transaccion[]
   tarjetas      Tarjeta[]
+  servicios     Servicio[]
+  presupuestos  Presupuesto[]
 
   @@map("hogares")
 }
@@ -99,6 +102,7 @@ model Categoria {
   esFijo        Boolean       @default(false) @map("es_fijo")
   hogar         Hogar         @relation(fields: [hogarId], references: [id])
   transacciones Transaccion[]
+  presupuestos  Presupuesto[]
 
   @@index([hogarId])
   @@map("categorias")
@@ -165,6 +169,58 @@ model ConsumoTarjeta {
 
   @@index([tarjetaId])
   @@map("consumos_tarjeta")
+}
+
+// ── Fase 3: Servicios, pagos y presupuesto por sobres ─────────────
+
+enum Periodicidad {
+  mensual
+  bimestral
+  anual
+}
+
+model Servicio {
+  id             String         @id @default(uuid())
+  hogarId        String         @map("hogar_id")
+  nombre         String // ej: "Luz (Edesur)"
+  montoEstimado  Decimal        @map("monto_estimado") @db.Decimal(15, 2)
+  periodicidad   Periodicidad   @default(mensual)
+  diaVencimiento Int            @map("dia_vencimiento")
+  mesAncla       Int            @default(1) @map("mes_ancla") // para bimestrales/anuales: mes de referencia (1-12)
+  activo         Boolean        @default(true)
+  creadoEn       DateTime       @default(now()) @map("creado_en")
+  hogar          Hogar          @relation(fields: [hogarId], references: [id])
+  pagos          PagoServicio[]
+
+  @@index([hogarId])
+  @@map("servicios")
+}
+
+// El estado "pagado" de un servicio vive acá, en el origen (decisión §12)
+model PagoServicio {
+  id          String   @id @default(uuid())
+  servicioId  String   @map("servicio_id")
+  periodo     String // "2026-06" → qué mes/período se pagó
+  montoPagado Decimal? @map("monto_pagado") @db.Decimal(15, 2)
+  creadoEn    DateTime @default(now()) @map("creado_en")
+  servicio    Servicio @relation(fields: [servicioId], references: [id])
+
+  @@unique([servicioId, periodo])
+  @@map("pagos_servicio")
+}
+
+// Sobres: cada peso tiene un trabajo (estilo YNAB)
+model Presupuesto {
+  id            String    @id @default(uuid())
+  hogarId       String    @map("hogar_id")
+  categoriaId   String    @map("categoria_id")
+  mes           String // "2026-06"
+  montoAsignado Decimal   @map("monto_asignado") @db.Decimal(15, 2)
+  hogar         Hogar     @relation(fields: [hogarId], references: [id])
+  categoria     Categoria @relation(fields: [categoriaId], references: [id])
+
+  @@unique([hogarId, categoriaId, mes])
+  @@map("presupuestos")
 }
 
 model Cuota {
