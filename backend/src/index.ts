@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import authRoutes from "./routes/auth.routes";
+import hogaresRoutes from "./routes/hogares.routes";
 
 const app = express();
 app.use(cors());
@@ -14,7 +15,8 @@ app.get("/health", (_req, res) => {
 
 // Rutas por módulo
 app.use("/auth", authRoutes);
-// Próximos: hogares, cuentas, categorías, transacciones
+app.use("/hogares", hogaresRoutes);
+// Próximos: cuentas, categorías, transacciones
 
 const PORT = process.env.PORT ?? 3000;
 app.listen(PORT, () => {
